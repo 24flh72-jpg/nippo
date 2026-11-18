@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,">
+<title>日報作成ツール</title>
+<style>
+:root{
+--bg:#f4f6f5; --card:#ffffff; --text:#17211e; --muted:#5b6b66; --line:#dde6e2;
+--teal:#0f766e; --teal-d:#0b5e57; --teal-light:#e6f4f1;
+--red:#dc2626; --red-bg:#fef2f2; --orange:#d97706; --orange-bg:#fffbeb; --green:#15803d; --green-bg:#f0fdf4;
+--yellow-bg:#fefce8;
+--auto-bg:#e6f4f1; --auto-line:#0f766e;
+}
+@media (prefers-color-scheme: dark){
+:root{ --bg:#111716; --card:#1a2421; --text:#eef4f1; --muted:#a8bab3; --line:#2e3d38; --teal:#2dd4bf; --teal-d:#2dd4bf; --teal-light:#12312d; --red-bg:#3a1515; --orange-bg:#35270e; --green-bg:#14301e; --yellow-bg:#2f2a0e; --auto-bg:#12312d; --auto-line:#2dd4bf;}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;line-height:1.6;overflow-x:hidden}
+.wrap{max-width:760px;margin:0 auto;padding:16px max(14px,env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+h1{font-size:26px;line-height:1.25;margin:6px 0 4px;letter-spacing:.02em}
+.sub{color:var(--muted);font-size:15px;margin:0 0 14px}
+.top-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+button{min-height:54px;font-size:16px;font-weight:700;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:12px;cursor:pointer;touch-action:manipulation}
+button.primary{background:var(--teal);color:#fff;border-color:var(--teal)}
+button.primary:active{background:var(--teal-d)}
+button.ghost{background:var(--card)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:14px 0}
+.card h2{font-size:19px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+.card h2 .no{background:var(--teal);color:#fff;width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
+.hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field label{display:block;font-weight:700;font-size:15px;margin-bottom:4px}
+.field .desc{font-size:12px;color:var(--muted);font-weight:400;display:block;line-height:1.4}
+.field input,.field textarea,.field select{width:100%;max-width:100%;font-size:17px;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);min-height:52px}
+.field textarea{font-size:16px;min-height:96px;line-height:1.6}
+.field input[readonly]{background:var(--teal-light);font-weight:700}
+/* 自動計算欄の見分け：色付き背景＋破線枠＋「自動計算」バッジ */
+.field input.auto-calc{background:var(--auto-bg);border:1.5px dashed var(--auto-line);font-weight:700}
+.auto-badge{display:inline-block;background:var(--teal);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:2px;letter-spacing:.03em;line-height:1.5}
+.auto-badge[hidden]{display:none}
+@media (prefers-color-scheme: dark){.auto-badge{color:#06231f}}
+.full{grid-column:1/-1}
+/* 必達ライン */
+.hero{background:#0f2e2a;color:#fff;border:none}
+@media (prefers-color-scheme: dark){.hero{background:#0b3d36}}
+.hero h2{color:#fff}
+.hero .hint{color:#bfe8df}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.hero-box{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:12px;min-width:0}
+.hero-box small{display:block;font-size:13px;opacity:.9}
+.hero-box strong{font-size:28px;line-height:1.1;display:block}
+.hero-box span{font-size:14px;opacity:.95}
+.hero-main{grid-column:1/-1;background:#fff;color:#0f2e2a;text-align:center;padding:16px}
+.hero-main strong{font-size:42px}
+.hero-main small{color:#456}
+.kpi{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.kpi div{background:var(--teal-light);border-radius:10px;padding:10px;min-width:0}
+.kpi small{display:block;color:var(--muted);font-size:12px;font-weight:700}
+.kpi b{font-size:19px;word-break:break-all}
+.diff-plus{color:var(--green)}.diff-minus{color:var(--red)}
+/* 着地予測の自動計算表示 */
+.auto-box{background:var(--auto-bg);border:1.5px dashed var(--auto-line);border-radius:12px;padding:14px;text-align:center}
+.auto-box small{display:block;font-size:13px;font-weight:700;color:var(--muted)}
+.auto-box strong{font-size:30px;line-height:1.2;display:block}
+.auto-box span{font-size:13px;color:var(--muted)}
+/* 目標達成への逆算 */
+.rev-box{margin-top:14px;background:var(--teal-light);border:1.5px solid var(--teal);border-radius:12px;padding:14px}
+.rev-title{font-weight:800;font-size:16px;margin-bottom:6px}
+.rev-main{font-size:16px}
+.rev-main b{font-size:21px}
+.rev-chain{font-size:16px;margin-top:8px;line-height:1.8}
+.rev-chain b{font-size:20px;color:var(--teal-d)}
+.rev-note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
+/* 出勤見通し */
+.day-row{display:grid;grid-template-columns:60px 1fr 1fr 64px;gap:8px;align-items:end;margin-bottom:10px;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--card)}
+.day-row.bad{background:var(--red-bg);border-color:#fca5a5}
+.day-row.warn{background:var(--orange-bg);border-color:#fcd34d}
+.day-row.ok{background:var(--green-bg)}
+.day-row label{font-size:12px;font-weight:700;color:var(--muted);display:block}
+.day-row input{width:100%;max-width:100%;font-size:17px;padding:10px;border:1.5px solid var(--line);border-radius:8px;min-height:50px;background:#fff;color:#111}
+@media (prefers-color-scheme: dark){.day-row input{background:#111;color:#fff}}
+.day-date{font-weight:800;font-size:16px;line-height:1.3;padding-bottom:12px;white-space:nowrap}
+.day-date small{display:block;font-size:11px;color:var(--muted);font-weight:700}
+.day-diff{font-weight:800;font-size:16px;text-align:center;padding-bottom:12px}
+.day-diff small{display:block;font-size:11px;color:var(--muted)}
+textarea#reportOut{width:100%;max-width:100%;min-height:420px;font-size:15px;line-height:1.7;padding:14px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--text);white-space:pre-wrap}
+.copy-bar{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-top:12px}
+.copy-bar p{margin:0;font-size:13px;color:var(--muted);padding-left:6px}
+.toast{display:none;background:#111;color:#fff;text-align:center;padding:12px;border-radius:10px;margin-top:10px;font-weight:700}
+.guide{background:var(--yellow-bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px}
+.guide b{color:var(--teal)}
+details{margin-top:8px} summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer}
+/* iPhone 16（幅393px前後）に合わせた調整 */
+@media(max-width:430px){
+.wrap{padding-left:12px;padding-right:12px}
+h1{font-size:24px}
+.card{padding:14px 12px;border-radius:14px}
+.grid{gap:10px}
+.hero-main strong{font-size:38px}
+.hero-box strong{font-size:25px}
+.kpi b{font-size:17px}
+.day-row{grid-template-columns:54px 1fr 1fr 58px;gap:6px;padding:8px}
+.day-date{font-size:15px}
+.day-diff{font-size:15px}
+.auto-box strong{font-size:26px}
+.top-actions{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>📋 日報作成ツール</h1>
+<p class="sub">数字を入れるだけ。達成率・あと何本・回転率・着地予測は自動で計算します。</p>
+
+<div class="guide"><b>使い方（3ステップ）</b><br>① 日付と数字を入れる → ② 下の「今日の必達ライン」を確認 → ③ 一番下の日報文をコピーして貼るだけ</div>
+
+<div class="top-actions">
+<button class="primary" id="btnExample">✏️ 入力例を入れる<br><small style="font-weight:400;font-size:12px">ダミーの数字で試せます</small></button>
+<button class="ghost" id="btnClear">🗑️ 全部クリア</button>
+</div>
+
+<!-- 必達ライン ライブ表示 -->
+<section class="card hero" aria-live="polite">
+<h2>🎯 今日の必達ライン</h2>
+<p class="hint">朝イチでここだけ見れば、今日やることが分かります。</p>
+<div class="hero-grid">
+<div class="hero-box hero-main"><small>本数目標まで あと</small><strong id="heroRest">— 本</strong><span id="heroHonsuDetail">スタートと目標を入れてください</span></div>
+<div class="hero-box" style="grid-column:1/-1"><small>今日の出勤予定</small><strong id="heroStaff">— 人</strong><span>当日の出勤予定人数</span></div>
+</div>
+</section>
+
+<!-- 1 基本・今日 -->
+<section class="card">
+<h2><span class="no">1</span> 今日のこと</h2>
+<p class="hint">日報の日付と、今日のスタート時点の数字です。</p>
+<div class="grid">
+<div class="field full"><label>店名<span class="desc">日報文の1行目に「◾️店名 ◯月分日報」として出ます</span></label><input type="text" id="storeName" placeholder="例）◯◯◯店"></div>
+<div class="field"><label>対象月<span class="desc">日報の日付の前日の月が自動で入ります（前日の結果を翌朝に作るため）。手で変えた場合は、その値が優先されます</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="targetMonth" placeholder="例）11"></div>
+<div class="field"><label>日報の日付</label><input type="date" id="reportDate"></div>
+<div class="field"><label>平均客単価（円）<span class="desc">入れると売上目標を自動計算し、不足分を本数でも表示します</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="monthUnitPrice" placeholder="例）1000"></div>
+<div class="field"><label>当月の回転率<span class="desc">入れると「目標達成への逆算」の出勤人数に優先して使います</span></label><input type="text" inputmode="decimal" pattern="[0-9.]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-dec="1" id="monthKaiten" placeholder="例）0.83"></div>
+<div class="field full"><label>今日の売上目標（円）<span class="auto-badge" id="todaySalesBadge" hidden>自動計算</span><span class="desc" id="todaySalesTargetDesc">平均客単価を入れると自動計算・手入力もできます</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" class="auto-calc" id="todaySalesTarget" placeholder="例）100000"></div>
+<div class="field"><label>スタート本数（本）<span class="desc">朝の時点で既に入っている本数</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="startHonsu" placeholder="例）50"></div>
+<div class="field"><label>本数目標（本）<span class="desc">今日 必ず届かせたい本数</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="targetHonsu" placeholder="例）100"></div>
+<div class="field full"><label>今日の出勤予定（人）<span class="desc">当日に増やすのは難しいので、予定人数だけ入れます。下の「出勤の見通し」の初日（今日）の予定と連動します（どちらに入れても、もう一方に同じ値が入ります）</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="todayStaff" placeholder="例）120"></div>
+</div>
+<div class="kpi">
+<div><small>あと本数</small><b id="kpiRest">—</b></div>
+<div><small>回転率</small><b id="kpiKaiten">—</b></div>
+<div><small>出勤予定</small><b id="kpiStaff">—</b></div>
+</div>
+</section>
+
+<!-- 2 昨日 -->
+<section class="card">
+<h2><span class="no">2</span> 昨日の結果</h2>
+<p class="hint">昨日の実績です。客単価と回転率は自動計算します。</p>
+<div class="grid">
+<div class="field"><label>昨日の売上（円）</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="ySales" placeholder="例）100000"></div>
+<div class="field"><label>昨日の売上目標（円）<span class="desc">達成率を出すために入力・任意</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="ySalesTarget" placeholder="例）105000"></div>
+<div class="field"><label>昨日の本数（本）</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="yHonsu" placeholder="例）100"></div>
+<div class="field"><label>昨日の出勤（人）</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="yStaff" placeholder="例）120"></div>
+<div class="field full"><label>昨日の客単価（円）<span class="auto-badge" id="yUnitBadge">自動計算</span><span class="desc">空欄なら 売上 ÷ 本数 で自動計算します（色付き＋バッジが付いている間は自動計算中です。数字を入れると手入力に切り替わります）</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="yUnitPrice" placeholder="自動計算"></div>
+</div>
+<div class="kpi">
+<div><small>売上達成率</small><b id="kpiYAchieve">—</b></div>
+<div><small>客単価</small><b id="kpiYUnit">—</b></div>
+<div><small>昨日の回転率</small><b id="kpiYKaiten">—</b></div>
+</div>
+</section>
+
+<!-- 3 今月 -->
+<section class="card">
+<h2><span class="no">3</span> 今月の進捗</h2>
+<p class="hint">着地予測と平均売上は自動計算です（着地予測＝累計売上 ÷ 昨日までの日数 × 今月の総日数、平均売上＝累計売上 ÷ 昨日までの日数）。累計売上だけ入れてください。平均本数・平均出勤数は月の実績を手入力してください。金額は千円単位に四捨五入して表示します。累計売上の進捗率の横には、日数消化率の「理想」も合わせて表示します。</p>
+<div class="grid">
+<div class="field"><label>今月の目標売上（円）</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="mTarget" placeholder="例）3000000"></div>
+<div class="field"><label>今までの累計売上（円）<span class="desc">昨日までの合計</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="mCumulative" placeholder="例）1650000"></div>
+<div class="field"><label>平均本数（本）<span class="desc">今月の1日あたり平均・手入力</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="mAvgGuests" placeholder="例）100"></div>
+<div class="field"><label>平均出勤数（人）<span class="desc">今月の1日あたり平均・手入力</span></label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="mAvgStaff" placeholder="例）120"></div>
+<div class="field full">
+<div class="auto-box"><small>平均売上<span class="auto-badge">自動計算</span></small><strong id="mAvgSalesView">—</strong><span id="mAvgSalesNote">累計売上を入れると自動で計算します</span></div>
+</div>
+<div class="field full">
+<div class="auto-box"><small>着地予測<span class="auto-badge">自動計算</span></small><strong id="mForecastView">—</strong><span id="mForecastNote">累計売上を入れると自動で計算します</span></div>
+<p id="mProgressView" style="text-align:center;font-weight:700;margin:10px 0 0;font-size:15px;white-space:pre-line"></p>
+</div>
+</div>
+<div class="kpi">
+<div><small>目標まで</small><b id="kpiMGap">—</b></div>
+<div><small>残り日数</small><b id="kpiMRemain">—</b></div>
+<div><small>1日あたり必要</small><b id="kpiMPerDay">—</b></div>
+</div>
+<p class="hint" id="mComment" style="margin-top:10px;font-size:14px;color:var(--text)"></p>
+<div class="rev-box">
+<div class="rev-title">🎯 目標達成への逆算</div>
+<div class="rev-main" id="revMain">今月の目標売上と累計売上を入れると、目標達成までの逆算が出ます</div>
+<div class="rev-chain" id="revChain"></div>
+<div class="rev-note" id="revNote"></div>
+</div>
+</section>
+
+<!-- 4 出勤見通し -->
+<section class="card">
+<h2><span class="no">4</span> 出勤の見通し（今日から7日間）</h2>
+<p class="hint">日付は日報の日付から自動で入ります。入れるのは予定と目標だけです。初日（今日）の「予定」は、上の「今日の出勤予定」と連動します（どちらを変更しても、もう一方に同じ値が入ります。連動するのは予定だけで、目標は連動しません）。<span style="color:var(--red);font-weight:700">赤＝30人以上不足で要注意</span>、黄色＝10人以上不足です。</p>
+<div id="dayRows"></div>
+<div class="field" style="margin-top:14px"><label>出勤確保の対策<span class="desc">誰が・いつまでに・何人集めるか。1行に1件で書くと、日報文では各行の頭に📣が付きます</span></label><textarea id="staffAction" placeholder="例）店長が11/20までに、土日出られるスタッフへ声かけ。あと20人確保を目指す。"></textarea></div>
+</section>
+
+<!-- 5 本日予定・重点・在籍 -->
+<section class="card">
+<h2><span class="no">5</span> 本日予定・重点・在籍</h2>
+<div class="grid">
+<div class="field full"><label>本日予定<span class="desc">1行に1件。時間＋内容で書いてください</span></label><textarea id="todaySchedule" placeholder="13:00　来客対応&#10;15:00　面接&#10;16:00　ミーティング"></textarea></div>
+<div class="field full"><label>今日の重点（1つだけ）<span class="desc">今日いちばん力を入れること。日報文では行頭に🌟が付きます</span></label><input type="text" id="todayFocus" placeholder="例）土日の出勤確保の声かけを完了させる"></div>
+<div class="field"><label>総在籍（名）</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="totalMembers" placeholder="例）500"></div>
+<div class="field"><label>所属名</label><input type="text" id="belongName" placeholder="例）◯◯グループ"></div>
+<div class="field"><label>所属の人数（名）</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="belongCount" placeholder="例）450"></div>
+<div class="field"><label>入店（名）</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="joinCount" placeholder="0"></div>
+<div class="field"><label>退店（名）</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" id="leaveCount" placeholder="0"></div>
+<div class="field full"><label>担当<span class="desc">日報文の一番下に「担当：名前」として出ます。空欄のままだと「担当：」だけが出ます</span></label><input type="text" id="tantouName" placeholder="例）山田"></div>
+</div>
+</section>
+
+<!-- 日報文 -->
+<section class="card">
+<h2>📝 完成した日報文</h2>
+<p class="hint">入力すると自動で文章になります。そのままコピーして、いつもの場所に貼ってください。</p>
+<textarea id="reportOut" readonly></textarea>
+<div class="copy-bar">
+<p>内容を確認したら<br>コピーしてください</p>
+<button class="primary" id="btnCopy" style="min-width:150px">📋 日報をコピー</button>
+</div>
+<div class="toast" id="toast">✅ コピーしました！貼り付けできます</div>
+<details>
+<summary>💡 用語の短い説明</summary>
+<ul style="font-size:14px;padding-left:20px">
+<li><b>回転率</b>：出勤1人あたりの対応本数です。（本数 ÷ 出勤数）</li>
+<li><b>客単価</b>：お客様1人あたりの平均単価です。（売上 ÷ 本数）</li>
+<li><b>着地予測</b>：累計売上 ÷ 昨日までの日数 × 今月の総日数で出す、今のペースだと月末に届く見込みの売上です。</li>
+<li><b>平均客単価</b>：入れると、今日の売上目標（本数目標 × 平均客単価）を自動計算します。着地予測の不足分も「約◯本分」で合わせて表示します。</li>
+<li><b>平均売上</b>：累計売上 ÷ 昨日までの日数で自動計算する、1日あたりの平均売上です。</li>
+<li><b>平均本数・平均出勤数</b>：今月の1日あたりの平均です。月の実績を見て手入力してください。入力すると日報文の今月の進捗にも出ます。</li>
+<li><b>金額表示</b>：金額は千円単位に四捨五入して表示します（例：12,345,678円 → 12,346,000円）。入力した金額そのものは丸めず、そのまま計算に使います。</li>
+<li><b>自動計算の欄</b>：色付きの背景＋破線の枠の欄（今日の売上目標・昨日の客単価・着地予測・平均売上）は自動計算まわりの欄です。「自動計算」バッジが出ている間は自動で計算されます。今日の売上目標は、平均客単価が空欄の時は手入力もできます。</li>
+<li><b>理想</b>：累計売上の進捗率の横に出る「理想」は、昨日までの日数 ÷ 今月の総日数で出した日数消化率です。進捗率が理想を上回っていれば順調なペースです。</li>
+<li><b>当月の回転率</b>：当月の平均の回転率です（例：0.83）。入れると「目標達成への逆算」の出勤人数の計算に最優先で使います。小数点込みで最大5文字まで入力できます。</li>
+<li><b>目標達成への逆算</b>：月目標 − 累計売上 ＝ 残り売上を、残り日数で割って1日平均の売上を出し、単価で割って必要な本数、回転率で割って必要な出勤人数まで出す計算です。単価は平均客単価（無ければ昨日の客単価）、回転率は当月の回転率（無ければ昨日の回転率、さらに無ければ今日の予定回転率）を使い、実際に使った回転率を注記に表示します。本数と出勤人数は切り上げで出します。</li>
+<li><b>対象月</b>：日報文の1行目「◯月分日報」に使う月です。この日報は前日の結果を翌朝に作るため、日報の日付の前日の月が自動で入ります（例：12/1に作る日報は11月分）。手で変えた場合は、その値が優先され、日付を変えても上書きされません。クリアすると自動値に戻ります。</li>
+<li><b>△</b>はプラス、<b>▼</b>はマイナスを表します。</li>
+</ul>
+</details>
+</section>
+
+<p style="text-align:center;color:var(--muted);font-size:13px">試作品です。使いにくい所があれば教えてください。</p>
+</div>
+
+<script>
+var $=function(id){return document.getElementById(id)};
+/* 入力値の読み取り：全角数字→半角、カンマ・空白・全角カンマは取り除いてから数値化する（読み取り専用。入力欄へは書き戻さない） */
+function cleanNumStr(s){ if(s==null)return ''; return (''+s).replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0)}).replace(/,/g,'').replace(/，/g,'').replace(/\s/g,'');}
+function num(id){ var el=$(id); if(!el)return null; var v=parseFloat(cleanNumStr(el.value)); return isNaN(v)?null:v; }
+/* 数字欄の防御：欄ごとに桁数の上限を決め、上限を超える入力は直前の正常値に戻す。
+   キーボード／変換側から長い数字列が一括で割り込んでも（例：129と打って120044699649になる症状）、
+   上限を超えた時点で弾くので欄は正常値のままになり、実害が出ない。
+   通常の1桁ずつの入力や、上限内の貼り付け（カンマ付き含む）はそのまま通る。 */
+var MAXMAP={targetMonth:2,monthUnitPrice:6,todaySalesTarget:9,startHonsu:4,targetHonsu:4,todayStaff:3,ySales:9,ySalesTarget:9,yHonsu:3,yStaff:3,yUnitPrice:9,mTarget:9,mCumulative:9,mAvgGuests:3,mAvgStaff:3,totalMembers:4,belongCount:4,joinCount:3,leaveCount:3};
+function digitsOnly(s){ return cleanNumStr(s==null?'':s).replace(/[^0-9]/g,''); }
+function maxDigitsFor(el){ var m=el.getAttribute?parseInt(el.getAttribute('data-max'),10):NaN; if(!isNaN(m)&&m>0)return m; if(el.id&&MAXMAP[el.id])return MAXMAP[el.id]; if(el.classList&&(el.classList.contains('d-plan')||el.classList.contains('d-target')))return 3; return 9; }
+function sanitizeNumeric(el){ if(!el)return; var cleaned=digitsOnly(el.value); if(cleaned.length>maxDigitsFor(el)){ el.value=(el._lastValid!=null?el._lastValid:''); return; } if(el.id==='targetMonth'&&cleaned!==''&&parseInt(cleaned,10)>12){ el.value=(el._lastValid!=null?el._lastValid:''); return; } if(cleaned!==el.value)el.value=cleaned; el._lastValid=cleaned; }
+/* 対象月の自動設定：この日報は前日の結果を翌朝に作るものなので、自動値は「日報の日付の前日の月」。
+   ユーザーが対象月を手で変えたら手動フラグを立て、その値を優先して日付変更では上書きしない。
+   クリア・入力例ではフラグを戻し、自動値に追随させる。 */
+var targetMonthManual=false;
+function autoTargetMonth(){ var base=parseISO($('reportDate').value); if(!base)return null; var prev=new Date(base.getFullYear(),base.getMonth(),base.getDate()); prev.setDate(prev.getDate()-1); return prev.getMonth()+1; }
+function syncTargetMonth(){ if(targetMonthManual)return; var el=$('targetMonth'); if(!el)return; var m=autoTargetMonth(); if(m==null)return; el.value=m; el._lastValid=String(m); }
+/* 当月の回転率専用：小数点「.」を残すサニタイズ。桁数ガードは小数点込みで最大5文字（例：0.943）。
+   既存の数字サニタイズ（digitsOnly）を通すと小数点が消えてしまうので、この欄は data-dec で分けて処理する。
+   小数点は先頭の1つだけ残し、上限を超える一括入力は直前の正常値に戻す（数字欄と同じ二重防御の考え方）。 */
+var DEC_MAX=5;
+function cleanDecStr(s){ if(s==null)return ''; var t=(''+s).replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0)}).replace(/．/g,'.').replace(/,/g,'').replace(/，/g,'').replace(/\s/g,'').replace(/[^0-9.]/g,''); var dot=t.indexOf('.'); if(dot>=0){ t=t.slice(0,dot+1)+t.slice(dot+1).replace(/\./g,''); } return t; }
+function sanitizeDecimal(el){ if(!el)return; var cleaned=cleanDecStr(el.value); if(cleaned.length>DEC_MAX){ el.value=(el._lastValidDec!=null?el._lastValidDec:''); return; } if(cleaned!==el.value)el.value=cleaned; el._lastValidDec=cleaned; }
+/* 入力される前にもチェック：複数桁が一度に入って上限を超える場合は、その入力自体を止める */
+function onBeforeInput(e){ var el=e.target; if(!el||!el.getAttribute)return; var isNum=!!el.getAttribute('data-num'), isDec=!!el.getAttribute('data-dec'); if(!isNum&&!isDec)return; if(!e.inputType||e.inputType.indexOf('insert')!==0)return; if(e.data==null)return; var s=el.selectionStart, en=el.selectionEnd; if(isDec){ var insD=cleanDecStr(e.data); var curD=(''+el.value); var nextD; if(s==null||en==null){ nextD=curD+insD; } else { nextD=curD.slice(0,s)+insD+curD.slice(en); } if(cleanDecStr(nextD).length>DEC_MAX){ e.preventDefault(); } return; } var insert=digitsOnly(e.data); var cur=digitsOnly(el.value); var next; if(s==null||en==null){ next=cur+insert; } else { next=cur.slice(0,s)+insert+cur.slice(en); } if(next.length>maxDigitsFor(el)){ e.preventDefault(); } }
+/* プログラムから値を入れた後に、正常値の記録を合わせる */
+function syncNumericValid(){ document.querySelectorAll('[data-num]').forEach(function(el){ var d=digitsOnly(el.value); if(d.length<=maxDigitsFor(el))el._lastValid=d; }); document.querySelectorAll('[data-dec]').forEach(function(el){ var d=cleanDecStr(el.value); if(d.length<=DEC_MAX)el._lastValidDec=d; }); }
+/* 各欄に上限（data-max / maxlength）を適用し、正常値の初期記録を作る */
+function applyLimits(){ document.querySelectorAll('[data-num]').forEach(function(el){ var m=maxDigitsFor(el); el.setAttribute('data-max',m); try{el.maxLength=m;}catch(err){} var d=digitsOnly(el.value); el._lastValid=(d.length<=m)?d:''; }); document.querySelectorAll('[data-dec]').forEach(function(el){ el.setAttribute('data-max',DEC_MAX); try{el.maxLength=DEC_MAX;}catch(err){} var d=cleanDecStr(el.value); el._lastValidDec=(d.length<=DEC_MAX)?d:''; }); }
+function fmt(n){return n==null||isNaN(n)?'—':Math.round(n).toLocaleString('ja-JP')}
+/* KPIボックスは等分グリッドのまま統一し、値が長い時だけ文字を一段〜二段小さくして収める（短い値は現状サイズ） */
+function fitKpi(){ document.querySelectorAll('.kpi b').forEach(function(b){ var len=b.textContent.length; b.style.fontSize=(len>=15)?'13.5px':((len>=11)?'16px':''); }); }
+/* 金額表示は千円単位に四捨五入（下3桁を丸める）。入力値そのものは丸めず、表示だけ丸める */
+function round1000(n){return Math.round(n/1000)*1000}
+function yen(n){return n==null||isNaN(n)?'—':fmt(round1000(n))+'円'}
+function diffText(d,unit){ if(d==null||isNaN(d))return '—'; var v=(unit==='円')?round1000(d):d; if(v>0)return '△'+fmt(Math.abs(v))+(unit||''); if(v<0)return '▼'+fmt(Math.abs(v))+(unit||''); return '±0'+(unit||'');}
+function weekday(d){return ['日','月','火','水','木','金','土'][d.getDay()]}
+function parseISO(iso){ if(!iso)return null; var p=iso.split('-'); return new Date(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10));}
+function toISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function dateLabel(iso){ var d=parseISO(iso); if(!d)return '—'; return (d.getMonth()+1)+'/'+d.getDate()+'（'+weekday(d)+'）';}
+function shortDate(iso){ var d=parseISO(iso); if(!d)return '—'; return (d.getMonth()+1)+'/'+d.getDate()+'('+weekday(d)+')';}
+/* 日報文の出力側でだけマーカーを付ける（入力欄は文章だけのまま）。
+   今日の重点は🌟、出勤確保の対策は📣。行頭に既存マーカー（✅🌟📣📢💡）があれば、
+   それを外して正しいマーカー1つに置き換える */
+var MARKERS=['✅','🌟','📣','📢','💡'];
+function withMark(line,marker){ var t=(line==null?'':(''+line)).trim(); if(!t)return ''; var changed=true; while(changed){ changed=false; for(var i=0;i<MARKERS.length;i++){ if(t.indexOf(MARKERS[i])===0){ t=t.slice(MARKERS[i].length).trim(); changed=true; } } } if(!t)return marker; return marker+' '+t; }
+
+/* 出勤見通し：今日から7日分を自動生成（日付は日報の日付が起点） */
+var DAY_COUNT=7;
+function buildDays(){
+var wrap=$('dayRows'); wrap.innerHTML='';
+for(var i=0;i<DAY_COUNT;i++){
+var row=document.createElement('div'); row.className='day-row'; row.id='dayRow'+i;
+row.innerHTML='<div class="day-date" id="dayDate'+i+'">—<small>日付</small></div>'
++'<div><label>予定（人）</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" data-max="3" maxlength="3" class="d-plan" data-i="'+i+'" placeholder="120"></div>'
++'<div><label>目標（人）</label><input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-num="1" data-max="3" maxlength="3" class="d-target" data-i="'+i+'" placeholder="125"></div>'
++'<div class="day-diff" id="dayDiff'+i+'">—<small>差</small></div>';
+wrap.appendChild(row);
+}
+var inputs=wrap.querySelectorAll('input'); for(var j=0;j<inputs.length;j++){ (function(inp){ inp.addEventListener('input',function(){sanitizeNumeric(inp);}); inp.addEventListener('change',function(){sanitizeNumeric(inp);}); })(inputs[j]); inputs[j].addEventListener('input',update); inputs[j].addEventListener('change',update);}
+}
+function refreshDayDates(){
+var base=parseISO($('reportDate').value);
+for(var i=0;i<DAY_COUNT;i++){
+var cell=$('dayDate'+i); if(!cell)continue;
+if(!base){ cell.innerHTML='—<small>日付</small>'; continue;}
+var d=new Date(base); d.setDate(d.getDate()+i);
+cell.innerHTML=(d.getMonth()+1)+'/'+d.getDate()+'<small>'+weekday(d)+'曜日</small>';
+cell.setAttribute('data-iso',toISO(d));
+}
+}
+/* 「今日の出勤予定」と「出勤の見通しの初日（今日）の予定」の双方向連動。
+   連動するのは予定人数のみ（見通し側の目標は連動しない）。
+   直前に一致していた値を覚えておき、変わった側を正として、もう一方へ同じ値を書き込む。
+   片方を空欄にしたら、もう一方も空欄になる。書き込んだ値は桁数ガードの正常値（_lastValid）にも同期する。
+   日付が変わっても連動先は常に行0（初日＝今日）。 */
+var _staffSyncLast='';
+function syncTodayStaff(){
+var staffEl=$('todayStaff'); if(!staffEl)return;
+var row0=$('dayRow0'); if(!row0)return;
+var planEl=row0.querySelector('.d-plan'); if(!planEl)return;
+var s=digitsOnly(staffEl.value);
+var d=digitsOnly(planEl.value);
+if(s===d){ _staffSyncLast=s; return; }
+if(d===_staffSyncLast&&s!==_staffSyncLast){
+planEl.value=s; planEl._lastValid=s; _staffSyncLast=s;
+}else if(s===_staffSyncLast&&d!==_staffSyncLast){
+staffEl.value=d; staffEl._lastValid=d; _staffSyncLast=d;
+}else{
+/* 両方とも直前の一致値と違う場合（入力例などの一括セット時）は、上の「今日の出勤予定」を正として初日に合わせる */
+planEl.value=s; planEl._lastValid=s; _staffSyncLast=s;
+}
+}
+function getDays(){
+var arr=[];
+for(var i=0;i<DAY_COUNT;i++){
+var row=$('dayRow'+i); if(!row)continue;
+var cell=$('dayDate'+i);
+var dt=cell?cell.getAttribute('data-iso'):'';
+var plan=parseFloat(cleanNumStr(row.querySelector('.d-plan').value)); if(isNaN(plan))plan=null;
+var tgt=parseFloat(cleanNumStr(row.querySelector('.d-target').value)); if(isNaN(tgt))tgt=null;
+arr.push({date:dt,plan:plan,target:tgt,diff:(plan!=null&&tgt!=null)?plan-tgt:null});
+}
+return arr;
+}
+
+function update(){
+syncTargetMonth();
+refreshDayDates();
+syncTodayStaff();
+var reportDate=$('reportDate').value;
+var start=num('startHonsu'), th=num('targetHonsu'), staff=num('todayStaff');
+var rest=(th!=null&&start!=null)?th-start:null;
+var kaiten=(th!=null&&staff!=null&&staff!==0)?th/staff:null;
+
+/* 平均客単価が入っていれば、今日の売上目標＝本数目標×平均客単価 で自動算出する。
+   単価が未入力のときは、従来通り手入力の売上目標欄が使える。 */
+var unitM=num('monthUnitPrice');
+/* 自動算出値は千円単位に四捨五入して欄にも日報文にも出す */
+var autoSales=(unitM!=null&&th!=null)?round1000(Math.round(th*unitM)):null;
+var stEl=$('todaySalesTarget'), stDesc=$('todaySalesTargetDesc'), stBadge=$('todaySalesBadge');
+stEl.classList.add('auto-calc'); /* 売上目標欄は手入力モードでも常時自動計算カラー（バッジは自動計算中のみ表示） */
+if(autoSales!=null){
+stEl.value=autoSales; stEl.readOnly=true; stEl.classList.add('auto-calc'); stEl._lastValid=digitsOnly(stEl.value);
+if(stBadge)stBadge.hidden=false;
+if(stDesc)stDesc.textContent='平均客単価 × 本数目標 で自動計算中（'+fmt(th)+'本 × '+fmt(unitM)+'円 ＝ '+yen(autoSales)+'）';
+}else{
+stEl.readOnly=false;
+if(stBadge)stBadge.hidden=true;
+if(stDesc)stDesc.textContent=(unitM!=null)?'本数目標を入れると自動計算します':'平均客単価を入れると自動計算・手入力もできます';
+}
+
+$('heroRest').textContent=rest==null?'— 本':fmt(rest)+' 本';
+$('heroHonsuDetail').textContent=(th!=null&&start!=null)?('目標 '+fmt(th)+'本 ／ スタート '+fmt(start)+'本'):'スタートと目標を入れてください';
+$('heroStaff').textContent=staff==null?'— 人':fmt(staff)+' 人';
+$('kpiRest').textContent=rest==null?'—':fmt(rest)+'本';
+$('kpiKaiten').textContent=kaiten==null?'—':kaiten.toFixed(2);
+$('kpiStaff').textContent=staff==null?'—':fmt(staff)+'人';
+
+// yesterday（客単価は売上÷本数で自動計算）
+var yS=num('ySales'), yST=num('ySalesTarget'), yH=num('yHonsu'), yStaff=num('yStaff'), yUPInput=num('yUnitPrice');
+var yUnit=yUPInput!=null?yUPInput:(yS!=null&&yH!=null&&yH!==0?yS/yH:null);
+var yKaiten=(yH!=null&&yStaff!=null&&yStaff!==0)?yH/yStaff:null;
+var yAch=(yS!=null&&yST!=null&&yST!==0)?(yS/yST*100):null;
+$('kpiYUnit').textContent=yUnit==null?'—':yen(yUnit);
+/* 昨日の客単価：空欄の間は自動計算モードとして色＋バッジで見分ける。数字を入れたら通常色（手入力）に戻る */
+var yUPEl=$('yUnitPrice'); var yAuto=(yUPEl!=null&&yUPEl.value.trim()==='');
+if(yUPEl)yUPEl.classList.toggle('auto-calc',yAuto);
+var yBadge=$('yUnitBadge'); if(yBadge)yBadge.hidden=!yAuto;
+$('kpiYKaiten').textContent=yKaiten==null?'—':yKaiten.toFixed(2);
+$('kpiYAchieve').textContent=yAch==null?'—':yAch.toFixed(1)+'%';
+
+// month（着地予測＝累計 ÷ 昨日までの経過日数 × 今月の総日数 で自動計算）
+var mT=num('mTarget'), mCum=num('mCumulative');
+var base=parseISO(reportDate);
+var elapsed=null, totalDays=null, remain=null;
+if(base){
+totalDays=new Date(base.getFullYear(),base.getMonth()+1,0).getDate();
+elapsed=base.getDate()-1; // 昨日までの日数
+remain=totalDays-base.getDate()+1;
+}
+var mF=(mCum!=null&&elapsed!=null&&elapsed>0&&totalDays!=null)?(mCum/elapsed*totalDays):null;
+/* 平均売上＝累計売上 ÷ 昨日までの経過日数（自動計算） */
+var mAvgSales=(mCum!=null&&elapsed!=null&&elapsed>0)?(mCum/elapsed):null;
+var mAvgGuests=num('mAvgGuests'), mAvgStaff=num('mAvgStaff');
+/* 理想ペース＝日数消化率（昨日までの日数 ÷ 今月の総日数）。進捗率と並べて比べるための基準 */
+var idealPct=(elapsed!=null&&totalDays!=null&&totalDays>0)?(elapsed/totalDays*100):null;
+var mpv=$('mProgressView');
+if(mpv){ mpv.textContent=(mCum!=null&&mT!=null&&mT!==0)?('累計売上：'+yen(mCum)+'\n（進捗率 '+(mCum/mT*100).toFixed(1)+'%'+(idealPct!=null?'／理想 '+idealPct.toFixed(1)+'%':'')+'）'):''; }
+$('mAvgSalesView').textContent=mAvgSales==null?'—':yen(mAvgSales);
+$('mAvgSalesNote').textContent=(mCum!=null&&elapsed!=null&&elapsed>0)
+?('累計 '+yen(mCum)+' ÷ '+elapsed+'日 で計算')
+:(elapsed===0?'月の初日は、昨日の実績が出てから計算できます':'累計売上を入れると自動で計算します');
+$('mForecastView').textContent=mF==null?'—':yen(mF);
+$('mForecastNote').textContent=(mCum!=null&&elapsed!=null&&totalDays!=null)
+?('累計 '+yen(mCum)+' ÷ '+elapsed+'日 × '+totalDays+'日 で計算')
+:(elapsed===0?'月の初日は、昨日の実績が出てから計算できます':'累計売上を入れると自動で計算します');
+var mGap=(mT!=null&&mF!=null)?mF-mT:null; // negative = shortage
+var shortage=(mT!=null&&mF!=null)?mT-mF:null;
+var perDay=(shortage!=null&&remain!=null&&remain>0&&shortage>0)?shortage/remain:null;
+var perDayHonsu=(perDay!=null&&unitM!=null&&unitM!==0)?Math.round(perDay/unitM):null;
+$('kpiMGap').innerHTML=mGap==null?'—':'<span class="'+(mGap>=0?'diff-plus':'diff-minus')+'">'+diffText(mGap,'円')+'</span>';
+$('kpiMRemain').textContent=remain==null?'—':remain+'日';
+$('kpiMPerDay').textContent=perDay==null?(shortage!=null&&shortage<=0?'達成見込み':'—'): '平均＋約'+yen(perDay)+(perDayHonsu!=null?'（約'+fmt(perDayHonsu)+'本分）':'');
+$('mComment').textContent='';
+if(mT!=null&&mF!=null&&remain!=null){
+if(shortage>0) $('mComment').textContent='📌 目標まであと '+yen(shortage)+' 不足しています。残り'+remain+'日なので、1日あたり平均＋約'+yen(perDay)+(perDayHonsu!=null?'（約'+fmt(perDayHonsu)+'本分）':'')+'の上乗せが必要です。';
+else $('mComment').textContent='📌 着地予測が目標を上回っています。このペースを維持しましょう。';
+}
+
+/* 目標達成への逆算：月目標からの絶対量を、残り日数→単価→回転率の順に割っていく。
+   単価は平均客単価を優先（無ければ昨日の客単価で代用）、回転率は当月の回転率を優先（無ければ昨日の回転率、さらに無ければ今日の予定回転率で代用）。
+   本数・出勤は「必要量」なので切り上げ。途中の計算は丸めず、表示の段階でのみ切り上げる。 */
+var revRemainSales=(mT!=null&&mCum!=null)?(mT-mCum):null;
+var revAvgSales=(revRemainSales!=null&&revRemainSales>0&&remain!=null&&remain>0)?(revRemainSales/remain):null;
+var revUnit=(unitM!=null)?unitM:((yUnit!=null&&yUnit>0)?yUnit:null);
+var revUnitSrc=(unitM!=null)?'平均客単価':((revUnit!=null)?'昨日の客単価':'');
+var revAvgHonsu=(revAvgSales!=null&&revUnit!=null)?(revAvgSales/revUnit):null;
+var monthKaiten=num('monthKaiten'); if(monthKaiten!=null&&monthKaiten<=0)monthKaiten=null;
+var revKaiten=(monthKaiten!=null)?monthKaiten:((yKaiten!=null)?yKaiten:((kaiten!=null)?kaiten:null));
+var revKaitenSrc=(monthKaiten!=null)?'当月の回転率':((yKaiten!=null)?'昨日の回転率':((revKaiten!=null)?'今日の予定回転率':''));
+/* 当月の回転率は入力値そのまま（0.83／0.943など最大3桁の小数）を表示し、それ以外は従来通り小数2桁で表示する */
+var revKaitenDisp=(revKaiten==null)?'':((revKaitenSrc==='当月の回転率')?(''+(Math.round(revKaiten*1000)/1000)):revKaiten.toFixed(2));
+var revAvgStaff=(revAvgHonsu!=null&&revKaiten!=null&&revKaiten!==0)?(revAvgHonsu/revKaiten):null;
+var revMainEl=$('revMain'), revChainEl=$('revChain'), revNoteEl=$('revNote');
+if(revMainEl){
+if(revRemainSales==null){
+revMainEl.textContent='今月の目標売上と累計売上を入れると、目標達成までの逆算が出ます';
+revChainEl.textContent=''; revNoteEl.textContent='';
+}else if(revRemainSales<=0){
+revMainEl.innerHTML='🎉 累計売上が今月の目標に到達しています';
+revChainEl.textContent=''; revNoteEl.textContent='';
+}else{
+revMainEl.innerHTML='目標達成まで あと <b>'+yen(revRemainSales)+'</b>（残り'+remain+'日）';
+var chainHtml='1日平均 <b>'+yen(revAvgSales)+'</b>';
+if(revAvgHonsu!=null)chainHtml+=' → 約<b>'+fmt(Math.ceil(revAvgHonsu))+'本</b>';
+if(revAvgStaff!=null)chainHtml+=' → 約<b>'+fmt(Math.ceil(revAvgStaff))+'人</b>の出勤が必要';
+revChainEl.innerHTML=chainHtml;
+var revNotes=[];
+if(revUnitSrc)revNotes.push('単価：'+revUnitSrc+' '+fmt(revUnit)+'円');
+if(revAvgStaff!=null&&revKaitenSrc)revNotes.push('回転率：'+revKaitenSrc+' '+revKaitenDisp);
+if(revAvgHonsu==null)revNotes.push('平均客単価（または昨日の売上・本数）を入れると、本数・出勤まで出ます');
+else if(revAvgStaff==null)revNotes.push('当月の回転率（または昨日の出勤、今日の出勤予定と本数目標）を入れると、出勤人数まで出ます');
+revNoteEl.textContent=revNotes.join(' ／ ');
+}
+}
+
+// days outlook
+var days=getDays();
+days.forEach(function(dy,i){
+var el=$('dayDiff'+i); var row=$('dayRow'+i); if(!el||!row)return;
+row.classList.remove('bad','warn','ok');
+if(dy.diff==null){ el.innerHTML='—<small>差</small>';}
+else{
+el.innerHTML=diffText(dy.diff,'人')+'<small>充足率 '+(dy.target?Math.round(dy.plan/dy.target*100):'—')+'%</small>';
+if(dy.diff<=-30)row.classList.add('bad'); else if(dy.diff<=-10)row.classList.add('warn'); else if(dy.diff>=0)row.classList.add('ok');
+}
+});
+
+// report text
+var L=[];
+/* 1行目は「◾️店名 ◯月分日報」。店名が未入力なら「◾️◯月分日報」だけ。対象月が空欄の時は自動値（前日の月）を使う */
+var storeNameTxt=$('storeName')?$('storeName').value.trim():'';
+var tmVal=num('targetMonth'); if(tmVal==null||tmVal<1||tmVal>12)tmVal=autoTargetMonth();
+L.push('◾️'+(storeNameTxt?storeNameTxt+' ':'')+(tmVal!=null?tmVal+'月分日報':'日報'));
+L.push(''+dateLabel(reportDate));
+L.push('');
+L.push('■今日の必達ライン■');
+L.push('本数：'+(th==null?'—':fmt(th)+'本')+'（スタート'+(start==null?'—':fmt(start)+'本')+'／あと'+(rest==null?'—':fmt(rest)+'本')+'）');
+if(num('todaySalesTarget')!=null){ L.push('売上目標：'+yen(num('todaySalesTarget'))); }
+L.push('出勤予定：'+(staff==null?'—':fmt(staff)+'人'));
+L.push('');
+L.push('■昨日の結果■');
+L.push('売上：'+yen(yS)); if(yST!=null) L.push('（目標'+yen(yST)+'／達成率'+(yAch==null?'—':yAch.toFixed(1)+'%')+'／差 '+diffText(yS!=null&&yST!=null?yS-yST:null,'円')+'）');
+L.push('本数：'+(yH==null?'—':fmt(yH)+'本')+'　客単価：'+yen(yUnit));
+L.push('出勤：'+(yStaff==null?'—':fmt(yStaff)+'人')+'　回転率：'+(yKaiten==null?'—':yKaiten.toFixed(2)));
+L.push('');
+L.push('■今月の進捗■');
+L.push('月目標：'+yen(mT));
+if(mCum!=null){ L.push('累計売上：'+yen(mCum)); if(mT)L.push('（進捗率 '+(mCum/mT*100).toFixed(1)+'%'+(idealPct!=null?'／理想 '+idealPct.toFixed(1)+'%':'')+'）'); }
+L.push('着地予測：'+yen(mF)); if(mGap!=null)L.push('（目標との差 '+diffText(mGap,'円')+'）');
+if(mAvgSales!=null)L.push('平均売上：'+yen(mAvgSales));
+if(mAvgGuests!=null)L.push('平均本数：'+fmt(mAvgGuests)+'本');
+if(mAvgStaff!=null)L.push('平均出勤数：'+fmt(mAvgStaff)+'人');
+if(unitM!=null)L.push('平均客単価：'+fmt(unitM)+'円');
+if(remain!=null) L.push('残り日数：'+remain+'日'+(perDay!=null?'／1日あたり平均＋約'+yen(perDay)+(perDayHonsu!=null?'（約'+fmt(perDayHonsu)+'本分）':'')+'の上乗せが必要':''));
+if(revRemainSales!=null){
+L.push('');
+L.push('■目標達成への逆算■');
+if(revRemainSales<=0){
+L.push('累計売上が今月の目標に到達しています');
+}else{
+L.push('目標達成まで：あと'+yen(revRemainSales)+'（残り'+remain+'日）');
+var revLine='1日平均：'+yen(revAvgSales);
+if(revAvgHonsu!=null)revLine+=' → 約'+fmt(Math.ceil(revAvgHonsu))+'本';
+if(revAvgStaff!=null)revLine+=' → 約'+fmt(Math.ceil(revAvgStaff))+'人の出勤が必要';
+L.push(revLine);
+
+}
+}
+L.push('');
+L.push('■出勤の見通し■');
+var hasDay=false;
+days.forEach(function(dy){ if(dy.plan!=null||dy.target!=null){ hasDay=true; L.push(shortDate(dy.date)+' 人数：'+(dy.plan==null?'—':fmt(dy.plan)+'人')+'（目標：'+(dy.target==null?'—':fmt(dy.target)+'人')+' '+diffText(dy.diff,'人')+'）');}});
+if(!hasDay)L.push('（未入力）');
+if($('staffAction').value.trim()){ $('staffAction').value.split('\n').forEach(function(s){ if(s.trim())L.push(withMark(s,'📣')); }); }
+L.push('');
+L.push('■本日予定■');
+var sched=$('todaySchedule').value.trim();
+if(sched){ sched.split('\n').forEach(function(s){ if(s.trim())L.push('・'+s.trim());});} else L.push('・なし');
+L.push('');
+L.push('■今日の重点■');
+L.push($('todayFocus').value.trim()?withMark($('todayFocus').value,'🌟'):'（未入力）');
+L.push('');
+L.push('■在籍■');
+L.push('総在籍：'+(num('totalMembers')==null?'—':fmt(num('totalMembers'))+'名'));
+L.push('入店　'+(num('joinCount')==null?'—':fmt(num('joinCount'))+'名')+'・退店　'+(num('leaveCount')==null?'—':fmt(num('leaveCount'))+'名'));
+if($('belongName').value.trim()||num('belongCount')!=null) L.push(($('belongName').value.trim()||'所属')+'所属：'+(num('belongCount')==null?'—':fmt(num('belongCount'))+'名'));
+L.push('');
+L.push('担当：'+(($('tantouName')&&$('tantouName').value)?$('tantouName').value.trim():''));
+
+fitKpi();
+$('reportOut').value=L.join('\n');
+}
+
+/* 対象月を手で変えたら手動フラグを立てる（この登録は汎用リスナーより前に行い、同じ入力イベントで自動上書きされないようにする） */
+if($('targetMonth')){ $('targetMonth').addEventListener('input',function(){ targetMonthManual=true; }); $('targetMonth').addEventListener('change',function(){ targetMonthManual=true; }); }
+document.querySelectorAll('input,textarea').forEach(function(el){ if(el.getAttribute('data-num')){ el.addEventListener('input',function(){sanitizeNumeric(el);}); el.addEventListener('change',function(){sanitizeNumeric(el);}); } if(el.getAttribute('data-dec')){ el.addEventListener('input',function(){sanitizeDecimal(el);}); el.addEventListener('change',function(){sanitizeDecimal(el);}); } el.addEventListener('input',update); el.addEventListener('change',update);});
+/* 割り込み入力を入力前に止める防御と、フォーカス時の正常値の記録 */
+document.addEventListener('beforeinput',onBeforeInput);
+document.addEventListener('focusin',function(e){var el=e.target; if(el&&el.getAttribute&&el.getAttribute('data-num')){var d=digitsOnly(el.value); if(d.length<=maxDigitsFor(el))el._lastValid=d;} if(el&&el.getAttribute&&el.getAttribute('data-dec')){var dd=cleanDecStr(el.value); if(dd.length<=DEC_MAX)el._lastValidDec=dd;}});
+
+$('btnClear').addEventListener('click',function(){
+targetMonthManual=false;
+document.querySelectorAll('input,textarea').forEach(function(el){ if(el.id!=='reportOut')el.value='';});
+var today=new Date(); $('reportDate').value=toISO(today);
+syncNumericValid();
+update();
+});
+
+$('btnExample').addEventListener('click',function(){
+$('tantouName').value='';
+targetMonthManual=false;
+$('storeName').value=''; $('targetMonth').value='';
+$('reportDate').value='2026-11-18';
+$('startHonsu').value=50; $('targetHonsu').value=100; $('todayStaff').value=120;
+$('todaySalesTarget').value='';
+$('ySales').value=100000; $('yStaff').value=120; $('yUnitPrice').value=''; $('yHonsu').value=100; $('ySalesTarget').value=105000;
+// 累計1,650,000円（17日分）→ 着地予測は自動計算で約2,911,765円（表示2,912,000円）、平均売上は約97,059円（表示97,000円）、進捗率は55.0%になります
+$('mTarget').value=3000000; $('mCumulative').value=1650000;
+$('mAvgGuests').value=100; $('mAvgStaff').value=120;
+// 平均客単価1,000円 → 今日の売上目標は100本×1,000円＝100,000円で自動算出されます
+$('monthUnitPrice').value=1000;
+// 当月の回転率0.83（平均本数100÷平均出勤120≒0.83）→ 逆算の出勤人数は1日平均本数約103.8÷0.83＝約125.1→切り上げ126人になります
+$('monthKaiten').value='0.83';
+var data=[
+[120,120],
+[118,120],
+[115,125],
+[110,125],
+[105,130],
+[100,130],
+[95,130]
+];
+data.forEach(function(d,i){
+var row=$('dayRow'+i); if(!row)return;
+row.querySelector('.d-plan').value=d[0]; row.querySelector('.d-target').value=d[1];
+});
+$('todaySchedule').value='13:00　来客対応\n15:00　面接\n16:00　ミーティング';
+$('todayFocus').value='週末の出勤確保（特に土日の声かけ）';
+$('staffAction').value='不足が大きい週末を優先して声かけする';
+$('totalMembers').value=500; $('joinCount').value=2; $('leaveCount').value=1; $('belongName').value='◯◯グループ'; $('belongCount').value=450;
+syncNumericValid();
+update();
+window.scrollTo({top:0,behavior:'smooth'});
+});
+
+$('btnCopy').addEventListener('click',function(){
+var txt=$('reportOut').value;
+function done(){ var t=$('toast'); t.style.display='block'; setTimeout(function(){t.style.display='none'},2500);}
+if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done).catch(function(){ fallback();});} else fallback();
+function fallback(){ $('reportOut').removeAttribute('readonly'); $('reportOut').select(); try{document.execCommand('copy');}catch(e){} $('reportOut').setAttribute('readonly',''); done();}
+});
+
+// init
+(function(){
+var today=new Date();
+$('reportDate').value=toISO(today);
+buildDays();
+applyLimits();
+update();
+})();
+</script>
+</body>
+</html>
